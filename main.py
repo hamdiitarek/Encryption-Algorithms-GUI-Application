@@ -1,4 +1,5 @@
 import sys
+import math
 from collections import Counter
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit,
@@ -29,7 +30,8 @@ class EncryptionApp(QMainWindow):
         self.algorithm_label = QLabel("Select Algorithm:")
         self.algorithm_combo = QComboBox()
         self.algorithm_combo.addItems([
-            "Rail Fence Cipher"
+            "Rail Fence Cipher",
+            "Route Fence Cipher"
         ])
         self.algorithm_combo.currentTextChanged.connect(self.update_ui)
         self.layout.addWidget(self.algorithm_label)
@@ -48,6 +50,13 @@ class EncryptionApp(QMainWindow):
         self.rails_input.setText("2")  # Default number of rails
         self.layout.addWidget(self.rails_label)
         self.layout.addWidget(self.rails_input)
+
+        # Number of routes input (only for Route Fence Cipher)
+        self.columns_label = QLabel("Number of Columns:")
+        self.columns_input = QLineEdit()
+        self.columns_input.setText("4")  # Default number of columns
+        self.layout.addWidget(self.columns_label)
+        self.layout.addWidget(self.columns_input)
 
         # Key input (for algorithms that require a key)
         self.key_label = QLabel("Enter Key:")
@@ -114,9 +123,21 @@ class EncryptionApp(QMainWindow):
             self.key_label.hide()
             self.key_input.hide()
             self.generate_key_button.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
             # Show rails input
             self.rails_label.show()
             self.rails_input.show()
+        elif algorithm == "Route Fence Cipher":
+            # Hide key input and generate key button
+            self.key_label.hide()
+            self.key_input.hide()
+            self.generate_key_button.hide()
+            self.rails_label.hide()
+            self.rails_input.hide()
+            # Show columns input
+            self.columns_label.show()
+            self.columns_input.show()
         else:
             # Show key input and generate key button
             self.key_label.show()
@@ -125,6 +146,8 @@ class EncryptionApp(QMainWindow):
             # Hide rails input
             self.rails_label.hide()
             self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
 
     def generate_key(self):
         """Generate a key for algorithms that require one."""
@@ -149,6 +172,9 @@ class EncryptionApp(QMainWindow):
             if algorithm == "Rail Fence Cipher":
                 rails = int(self.rails_input.text())
                 result = self.rail_fence_cipher(text, rails, mode)
+            elif algorithm == "Route Fence Cipher":
+                columns = int(self.columns_input.text())
+                result = self.route_fence_cipher(text, columns, mode)
             else:
                 result = "Unsupported algorithm."
 
@@ -172,6 +198,67 @@ class EncryptionApp(QMainWindow):
         plt.ylabel("Frequency")
         plt.title("Character Frequency Analysis")
         plt.show()
+
+    def route_fence_cipher(self, text, columns, mode):
+        if mode == "Encrypt":
+            space_positions = [index for index, char in enumerate(text) if char == ' ']
+            
+            plaintext = text.replace(" ", "")
+
+            num_rows = math.ceil(len(plaintext) / columns)
+            
+            grid = [['' for _ in range(columns)] for _ in range(num_rows)]
+            
+            index = 0
+            for row in range(num_rows):
+                for col in range(columns):
+                    if index < len(plaintext):
+                        grid[row][col] = plaintext[index]
+                        index += 1
+            
+            encrypted_text = []
+            for col in range(columns):
+                for row in range(num_rows):
+                    if grid[row][col] != '':
+                        encrypted_text.append(grid[row][col])
+            
+            encrypted_text = ''.join(encrypted_text)
+            
+            encrypted_text_with_spaces = list(encrypted_text)
+            for pos in space_positions:
+                encrypted_text_with_spaces.insert(pos, ' ')
+            
+            return ''.join(encrypted_text_with_spaces)
+        else:
+            space_positions = [index for index, char in enumerate(text) if char == ' ']
+
+            ciphertext = text.replace(" ", "")
+
+
+            num_rows = math.ceil(len(ciphertext) / columns)
+            
+            grid = [['' for _ in range(columns)] for _ in range(num_rows)]
+            
+            index = 0
+            for col in range(columns):
+                for row in range(num_rows):
+                    if index < len(ciphertext):
+                        grid[row][col] = ciphertext[index]
+                        index += 1
+            
+            decrypted_text = []
+            for row in range(num_rows):
+                for col in range(columns):
+                    if grid[row][col] != '':
+                        decrypted_text.append(grid[row][col])
+
+            decrypted_text = ''.join(decrypted_text)
+
+            decrypted_text_with_spaces = list(decrypted_text)
+            for pos in space_positions:
+                decrypted_text_with_spaces.insert(pos, ' ')
+            
+            return ''.join(decrypted_text_with_spaces)
 
     def rail_fence_cipher(self, text, rails, mode):
         """Rail Fence Cipher"""
