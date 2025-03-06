@@ -1,11 +1,14 @@
 import sys
 import math
 import random
+import requests
 from collections import Counter
-from PySide6.QtWidgets import (
+from PySide6.QtGui import QIcon # type: ignore
+from PySide6.QtWidgets import ( # type: ignore
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit,
     QPushButton, QComboBox, QTextEdit, QMessageBox, QProgressBar
 )
+
 import matplotlib.pyplot as plt
 
 
@@ -84,10 +87,6 @@ class EncryptionApp(QMainWindow):
         self.layout.addWidget(self.ciphertext_label)
         self.layout.addWidget(self.ciphertext_output)
 
-        # Progress bar
-        self.progress_bar = QProgressBar()
-        self.layout.addWidget(self.progress_bar)
-
         # Buttons
         self.process_button = QPushButton("Process")
         self.process_button.clicked.connect(self.process_text)
@@ -109,12 +108,71 @@ class EncryptionApp(QMainWindow):
         self.apply_theme()
 
     def apply_theme(self):
+        """Apply the selected theme (dark or light)."""
         if self.dark_mode:
-            self.main_widget.setStyleSheet("background-color: #2E3440; color: #D8DEE9;")
-            self.dark_mode_button.setStyleSheet("background-color: #4C566A; color: #D8DEE9;")
+            # Dark theme
+            self.setStyleSheet("""
+                QWidget {
+                    background-color: #2E3440;
+                    color: #ECEFF4;
+                }
+                QLabel {
+                    color: #ECEFF4;
+                }
+                QLineEdit, QTextEdit, QComboBox {
+                    background-color: #4C566A;
+                    color: #ECEFF4;
+                    border: 1px solid #5E81AC;
+                    border-radius: 5px;
+                    padding: 5px;
+                }
+                QPushButton {
+                    background-color: #5E81AC;
+                    color: #ECEFF4;
+                    border: none;
+                    border-radius: 5px;
+                    padding: 10px;
+                    font-size: 14px;
+                }
+                QPushButton:hover {
+                    background-color: #81A1C1;
+                }
+                QPushButton:pressed {
+                    background-color: #4C566A;
+                }
+            """)
         else:
-            self.main_widget.setStyleSheet("background-color: #FFFFFF; color: #000000;")
-            self.dark_mode_button.setStyleSheet("background-color: #E5E9F0; color: #000000;")
+            # Light theme
+            self.setStyleSheet("""
+                QWidget {
+                    background-color: #F5F5F5;
+                    color: #333333;
+                }
+                QLabel {
+                    color: #333333;
+                }
+                QLineEdit, QTextEdit, QComboBox {
+                    background-color: #FFFFFF;
+                    color: #333333;
+                    border: 1px solid #CCCCCC;
+                    border-radius: 5px;
+                    padding: 5px;
+                }
+                QPushButton {
+                    background-color: #007BFF;
+                    color: #FFFFFF;
+                    border: none;
+                    border-radius: 5px;
+                    padding: 10px;
+                    font-size: 14px;
+                }
+                QPushButton:hover {
+                    background-color: #0056B3;
+                }
+                QPushButton:pressed {
+                    background-color: #004080;
+                }
+            """)
 
     def update_ui(self):
         """Update the UI based on the selected algorithm."""
@@ -168,11 +226,13 @@ class EncryptionApp(QMainWindow):
             QMessageBox.warning(self, "Error", "Please select an algorithm first!")
             return
         elif algorithm == "Playfair Cipher":
-            words = ["apple", "banana", "cherry", "date", "elderberry"]
-            random_key = random.choice(words)  # Choose one random word from the list
-        
-            # Set the random key as the text in the input field
-            self.key_input.setText(random_key)
+            response = requests.get("https://random-word-api.herokuapp.com/word")
+            if response.status_code == 200:
+                random_key = response.json()[0]
+                self.key_input.setText(random_key)
+            else:
+                QMessageBox.warning(self, "Error", f"API request failed with status code {response.status_code}.")
+            
         else:
             QMessageBox.warning(self, "Error", "Key generation is not supported for this algorithm.")
 
@@ -446,5 +506,9 @@ class EncryptionApp(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = EncryptionApp()
+    app.setWindowIcon(QIcon("encryptiontoolLogo.icns"))
+    app.setApplicationName("Encryption Tool")
+    window.setWindowIcon(QIcon("encryptiontoolLogo.icns"))    
+    window.setWindowTitle("Encryption Tool")
     window.show()
     sys.exit(app.exec())
