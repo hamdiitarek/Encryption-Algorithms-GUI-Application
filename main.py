@@ -1,5 +1,6 @@
 import sys
 import math
+import random
 from collections import Counter
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit,
@@ -31,7 +32,8 @@ class EncryptionApp(QMainWindow):
         self.algorithm_combo = QComboBox()
         self.algorithm_combo.addItems([
             "Rail Fence Cipher",
-            "Route Fence Cipher"
+            "Route Fence Cipher",
+            "Playfair Cipher"
         ])
         self.algorithm_combo.currentTextChanged.connect(self.update_ui)
         self.layout.addWidget(self.algorithm_label)
@@ -138,6 +140,16 @@ class EncryptionApp(QMainWindow):
             # Show columns input
             self.columns_label.show()
             self.columns_input.show()
+        elif algorithm == "Playfair Cipher":
+            # Hide key input and generate key button
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            # Show key input
+            self.generate_key_button.show()
+            self.key_label.show()
+            self.key_input.show()
         else:
             # Show key input and generate key button
             self.key_label.show()
@@ -155,6 +167,12 @@ class EncryptionApp(QMainWindow):
         if algorithm == "na":
             QMessageBox.warning(self, "Error", "Please select an algorithm first!")
             return
+        elif algorithm == "Playfair Cipher":
+            words = ["apple", "banana", "cherry", "date", "elderberry"]
+            random_key = random.choice(words)  # Choose one random word from the list
+        
+            # Set the random key as the text in the input field
+            self.key_input.setText(random_key)
         else:
             QMessageBox.warning(self, "Error", "Key generation is not supported for this algorithm.")
 
@@ -175,6 +193,10 @@ class EncryptionApp(QMainWindow):
             elif algorithm == "Route Fence Cipher":
                 columns = int(self.columns_input.text())
                 result = self.route_fence_cipher(text, columns, mode)
+            elif algorithm == "Playfair Cipher":
+                key = self.key_input.text()
+                result = self.play_fair_cipher(text, key, mode)
+                
             else:
                 result = "Unsupported algorithm."
 
@@ -198,6 +220,110 @@ class EncryptionApp(QMainWindow):
         plt.ylabel("Frequency")
         plt.title("Character Frequency Analysis")
         plt.show()
+
+    def create_playfair_matrix(self, key):
+        alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
+        key = key.upper().replace("J", "I")
+        
+        seen = set()
+        key = "".join([char for char in key if char not in seen and not seen.add(char)])
+        
+        matrix = []
+        
+        for char in key:
+            if char not in matrix and char in alphabet:
+                matrix.append(char)
+        
+        for char in alphabet:
+            if char not in matrix:
+                matrix.append(char)
+        
+        return [matrix[i:i+5] for i in range(0, 25, 5)]
+    
+    def find_position(self, char, matrix):
+        for row in range(5):
+            for col in range(5):
+                if matrix[row][col] == char:
+                    return row, col
+        return None
+    
+    def play_fair_cipher(self, text, key, mode):
+        if mode == "Encrypt":
+            matrix = self.create_playfair_matrix(key)
+
+            space_positions = [i for i, char in enumerate(text) if char == ' ']
+            plaintext = text.upper().replace("J", "I").replace(" ", "")
+            digraphs = []
+            
+            i = 0
+            while i < len(plaintext):
+                if i + 1 < len(plaintext) and plaintext[i] == plaintext[i + 1]:
+                    digraphs.append(plaintext[i] + 'X')
+                    i += 1
+                else:
+                    if i + 1 < len(plaintext):
+                        digraphs.append(plaintext[i] + plaintext[i + 1])
+                    else:
+                        digraphs.append(plaintext[i] + 'X')
+                    i += 2
+            
+            encrypted_text = []
+            for digraph in digraphs:
+                row1, col1 = self.find_position(digraph[0], matrix)
+                row2, col2 = self.find_position(digraph[1], matrix)
+                
+                if row1 == row2:
+                    encrypted_text.append(matrix[row1][(col1 + 1) % 5])
+                    encrypted_text.append(matrix[row2][(col2 + 1) % 5])
+                
+                elif col1 == col2:
+                    encrypted_text.append(matrix[(row1 + 1) % 5][col1])
+                    encrypted_text.append(matrix[(row2 + 1) % 5][col2])
+                
+                else:
+                    encrypted_text.append(matrix[row1][col2])
+                    encrypted_text.append(matrix[row2][col1])
+            
+            encrypted_with_spaces = list(''.join(encrypted_text))
+            for pos in space_positions:
+                encrypted_with_spaces.insert(pos, ' ')
+            
+            return ''.join(encrypted_with_spaces)
+        else :
+            matrix = self.create_playfair_matrix(key)
+
+            space_positions = [i for i, char in enumerate(text) if char == ' ']
+            ciphertext = text.upper().replace(" ", "")
+            
+            decrypted_text = []
+            for i in range(0, len(ciphertext), 2):
+                digraph = ciphertext[i:i+2]
+                row1, col1 = self.find_position(digraph[0], matrix)
+                row2, col2 = self.find_position(digraph[1], matrix)
+                
+                if row1 == row2:
+                    decrypted_text.append(matrix[row1][(col1 - 1) % 5])
+                    decrypted_text.append(matrix[row2][(col2 - 1) % 5])
+                
+                elif col1 == col2:
+                    decrypted_text.append(matrix[(row1 - 1) % 5][col1])
+                    decrypted_text.append(matrix[(row2 - 1) % 5][col2])
+                
+                else:
+                    decrypted_text.append(matrix[row1][col2])
+                    decrypted_text.append(matrix[row2][col1])
+            
+            decrypted_with_spaces = list(''.join(decrypted_text))
+            i = 0
+            while i < len(decrypted_with_spaces) - 1:
+                if decrypted_with_spaces[i] == decrypted_with_spaces[i + 2] and decrypted_with_spaces[i + 1] == 'X':
+                    decrypted_with_spaces.pop(i + 1)
+                i += 2
+
+            for pos in space_positions:
+                decrypted_with_spaces.insert(pos, ' ')
+            
+            return ''.join(decrypted_with_spaces)
 
     def route_fence_cipher(self, text, columns, mode):
         if mode == "Encrypt":
