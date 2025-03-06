@@ -297,31 +297,33 @@ class EncryptionApp(QMainWindow):
             
             decrypted_text = []
             for i in range(0, len(ciphertext), 2):
-                digraph = ciphertext[i:i+2]
-                row1, col1 = self.find_position(digraph[0], matrix)
-                row2, col2 = self.find_position(digraph[1], matrix)
-                
-                if row1 == row2:
-                    decrypted_text.append(matrix[row1][(col1 - 1) % 5])
-                    decrypted_text.append(matrix[row2][(col2 - 1) % 5])
-                
-                elif col1 == col2:
-                    decrypted_text.append(matrix[(row1 - 1) % 5][col1])
-                    decrypted_text.append(matrix[(row2 - 1) % 5][col2])
-                
-                else:
-                    decrypted_text.append(matrix[row1][col2])
-                    decrypted_text.append(matrix[row2][col1])
+                if i + 1 < len(ciphertext):
+                    digraph = ciphertext[i:i+2]
+                    row1, col1 = self.find_position(digraph[0], matrix)
+                    row2, col2 = self.find_position(digraph[1], matrix)
+                    
+                    if row1 == row2:
+                        decrypted_text.append(matrix[row1][(col1 - 1) % 5])
+                        decrypted_text.append(matrix[row2][(col2 - 1) % 5])
+                    
+                    elif col1 == col2:
+                        decrypted_text.append(matrix[(row1 - 1) % 5][col1])
+                        decrypted_text.append(matrix[(row2 - 1) % 5][col2])
+                    
+                    else:
+                        decrypted_text.append(matrix[row1][col2])
+                        decrypted_text.append(matrix[row2][col1])
             
             decrypted_with_spaces = list(''.join(decrypted_text))
             i = 0
-            while i < len(decrypted_with_spaces) - 1:
+            while i < len(decrypted_with_spaces) - 2:
                 if decrypted_with_spaces[i] == decrypted_with_spaces[i + 2] and decrypted_with_spaces[i + 1] == 'X':
                     decrypted_with_spaces.pop(i + 1)
-                i += 2
+                i += 1
 
             for pos in space_positions:
-                decrypted_with_spaces.insert(pos, ' ')
+                if pos < len(decrypted_with_spaces):
+                    decrypted_with_spaces.insert(pos, ' ')
             
             return ''.join(decrypted_with_spaces)
 
