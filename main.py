@@ -25,6 +25,11 @@ class EncryptionApp(QMainWindow):
         self.layout = QVBoxLayout()
         self.main_widget.setLayout(self.layout)
 
+        # About Us button
+        self.about_button = QPushButton("About Us")
+        self.about_button.clicked.connect(self.show_about_us)
+        self.layout.addWidget(self.about_button)
+
         # Dark mode toggle button
         self.dark_mode_button = QPushButton("Toggle Dark Mode")
         self.dark_mode_button.clicked.connect(self.toggle_dark_mode)
@@ -103,14 +108,24 @@ class EncryptionApp(QMainWindow):
         # Initialize UI based on the selected algorithm
         self.update_ui()
 
+    def show_about_us(self):
+            """Show the About Us information."""
+            about_text = (
+                "Encryption Tool\n"
+                "Developed by Hamdi, Omar, Ahmed and Abdelrhman\n\n"
+                "This application provides various encryption algorithms including Rail Fence Cipher, Route Cipher, and Playfair Cipher.\n\n"
+                "You can encrypt or decrypt text using the selected algorithm and mode.\n\n"
+                "You can also generate a random key for the Playfair Cipher algorithm.\n\n"
+                "The application also includes a character frequency analysis feature.\n\n"
+            )
+            QMessageBox.information(self, "About Us", about_text)
+
     def toggle_dark_mode(self):
         self.dark_mode = not self.dark_mode
         self.apply_theme()
 
     def apply_theme(self):
-        """Apply the selected theme (dark or light)."""
         if self.dark_mode:
-            # Dark theme
             self.setStyleSheet("""
                 QWidget {
                     background-color: #2E3440;
@@ -142,7 +157,6 @@ class EncryptionApp(QMainWindow):
                 }
             """)
         else:
-            # Light theme
             self.setStyleSheet("""
                 QWidget {
                     background-color: #F5F5F5;
@@ -462,57 +476,51 @@ class EncryptionApp(QMainWindow):
     def rail_fence_cipher(self, text, rails, mode):
         """Rail Fence Cipher"""
         if mode == "Encrypt":
-            rail = [['\n' for _ in range(len(text))] for _ in range(rails)]
-            dir_down = False
-            row, col = 0, 0
-
+            rail_pattern = ['' for _ in range(rails)]
+            
+            current_rail = 0
+            direction = 1  
+            
             for char in text:
-                if row == 0 or row == rails - 1:
-                    dir_down = not dir_down
-                rail[row][col] = char
-                col += 1
-                row += 1 if dir_down else -1
-
-            result = []
-            for i in range(rails):
-                for j in range(len(text)):
-                    if rail[i][j] != '\n':
-                        result.append(rail[i][j])
-            return ''.join(result)
+                rail_pattern[current_rail] += char
+                current_rail += direction
+                
+                if current_rail == 0 or current_rail == rails - 1:
+                    direction *= -1
+            
+            return ''.join(rail_pattern)
         else:
-            rail = [['\n' for _ in range(len(text))] for _ in range(rails)]
-            dir_down = None
-            row, col = 0, 0
-
-            for char in text:
-                if row == 0:
-                    dir_down = True
-                if row == rails - 1:
-                    dir_down = False
-                rail[row][col] = '*'
-                col += 1
-                row += 1 if dir_down else -1
-
+            rail_pattern = [['' for _ in range(len(text))] for _ in range(rails)]
+    
+            current_rail = 0
+            direction = 1  
+            
+            for i in range(len(text)):
+                rail_pattern[current_rail][i] = '*'
+                current_rail += direction
+                
+                if current_rail == 0 or current_rail == rails - 1:
+                    direction *= -1
+            
             index = 0
             for i in range(rails):
                 for j in range(len(text)):
-                    if rail[i][j] == '*' and index < len(text):
-                        rail[i][j] = text[index]
+                    if rail_pattern[i][j] == '*' and index < len(text):
+                        rail_pattern[i][j] = text[index]
                         index += 1
-
+            
             result = []
-            row, col = 0, 0
-            for _ in range(len(text)):
-                if row == 0:
-                    dir_down = True
-                if row == rails - 1:
-                    dir_down = False
-                if rail[row][col] != '\n':
-                    result.append(rail[row][col])
-                    col += 1
-                row += 1 if dir_down else -1
+            current_rail = 0
+            direction = 1
+            
+            for j in range(len(text)):
+                result.append(rail_pattern[current_rail][j])
+                current_rail += direction
+                
+                if current_rail == 0 or current_rail == rails - 1:
+                    direction *= -1
+            
             return ''.join(result)
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
