@@ -35,7 +35,7 @@ class EncryptionApp(QMainWindow):
         self.algorithm_combo = QComboBox()
         self.algorithm_combo.addItems([
             "Rail Fence Cipher",
-            "Route Fence Cipher",
+            "Route Cipher",
             "Playfair Cipher"
         ])
         self.algorithm_combo.currentTextChanged.connect(self.update_ui)
@@ -56,7 +56,7 @@ class EncryptionApp(QMainWindow):
         self.layout.addWidget(self.rails_label)
         self.layout.addWidget(self.rails_input)
 
-        # Number of routes input (only for Route Fence Cipher)
+        # Number of columns input (only for Route Cipher)
         self.columns_label = QLabel("Number of Columns:")
         self.columns_input = QLineEdit()
         self.columns_input.setText("4")  # Default number of columns
@@ -188,7 +188,7 @@ class EncryptionApp(QMainWindow):
             # Show rails input
             self.rails_label.show()
             self.rails_input.show()
-        elif algorithm == "Route Fence Cipher":
+        elif algorithm == "Route Cipher":
             # Hide key input and generate key button
             self.key_label.hide()
             self.key_input.hide()
@@ -250,9 +250,9 @@ class EncryptionApp(QMainWindow):
             if algorithm == "Rail Fence Cipher":
                 rails = int(self.rails_input.text())
                 result = self.rail_fence_cipher(text, rails, mode)
-            elif algorithm == "Route Fence Cipher":
+            elif algorithm == "Route Cipher":
                 columns = int(self.columns_input.text())
-                result = self.route_fence_cipher(text, columns, mode)
+                result = self.route_cipher(text, columns, mode)
             elif algorithm == "Playfair Cipher":
                 key = self.key_input.text()
                 result = self.play_fair_cipher(text, key, mode)
@@ -390,7 +390,7 @@ class EncryptionApp(QMainWindow):
             
             return ''.join(decrypted_with_spaces)
 
-    def route_fence_cipher(self, text, columns, mode):
+    def route_cipher(self, text, columns, mode):
         if mode == "Encrypt":
             space_positions = [index for index, char in enumerate(text) if char == ' ']
             
@@ -407,6 +407,11 @@ class EncryptionApp(QMainWindow):
                         grid[row][col] = plaintext[index]
                         index += 1
             
+            char = 'v'
+            for col in range(columns):
+                if grid[num_rows-1][col] == '':
+                    grid[num_rows-1][col] = char
+
             encrypted_text = []
             for col in range(columns):
                 for row in range(num_rows):
@@ -442,6 +447,9 @@ class EncryptionApp(QMainWindow):
                 for col in range(columns):
                     if grid[row][col] != '':
                         decrypted_text.append(grid[row][col])
+
+            while decrypted_text and decrypted_text[-1] == 'v':
+                decrypted_text.pop()
 
             decrypted_text = ''.join(decrypted_text)
 
