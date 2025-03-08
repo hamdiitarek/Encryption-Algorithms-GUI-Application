@@ -373,6 +373,9 @@ class EncryptionApp(QMainWindow):
                     else:
                         decrypted_text.append(matrix[row1][col2])
                         decrypted_text.append(matrix[row2][col1])
+                        
+            if decrypted_text[len(decrypted_text) - 1] == 'X' :
+                decrypted_text.pop(len(decrypted_text) - 1)
             
             decrypted_with_spaces = list(''.join(decrypted_text))
             i = 0
