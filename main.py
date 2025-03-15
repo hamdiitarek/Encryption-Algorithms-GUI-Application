@@ -2,6 +2,7 @@ import sys
 import math
 import random
 import requests
+import numpy as np  
 from collections import Counter
 from PySide6.QtGui import QIcon # type: ignore
 from PySide6.QtWidgets import ( # type: ignore
@@ -41,7 +42,11 @@ class EncryptionApp(QMainWindow):
         self.algorithm_combo.addItems([
             "Rail Fence Cipher",
             "Route Cipher",
-            "Playfair Cipher"
+            "Playfair Cipher",
+            "Hill Cipher",
+            "Vigenere Cipher",
+            "Caesar Cipher",
+            "One-Time Pad"  
         ])
         self.algorithm_combo.currentTextChanged.connect(self.update_ui)
         self.layout.addWidget(self.algorithm_label)
@@ -222,6 +227,48 @@ class EncryptionApp(QMainWindow):
             self.generate_key_button.show()
             self.key_label.show()
             self.key_input.show()
+        elif algorithm == "Hill Cipher":
+            # Hide rails and columns input
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            # Show key input
+            self.generate_key_button.hide()
+            self.key_label.show()
+            self.key_input.show()
+        elif algorithm == "Vigenere Cipher":
+            # Hide rails and columns input
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            # Show key input
+            self.generate_key_button.hide()
+            self.key_label.show()
+            self.key_input.show()
+        elif algorithm == "Caesar Cipher":
+            # Hide rails and columns input
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            # Show key input (used for shift value)
+            self.generate_key_button.hide()
+            self.key_label.setText("Enter Shift:")
+            self.key_label.show()
+            self.key_input.show()
+        elif algorithm == "One-Time Pad":
+            # Hide rails and columns input
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            # Show key input
+            self.generate_key_button.show()
+            self.key_label.setText("Enter Key:")
+            self.key_label.show()
+            self.key_input.show()
         else:
             # Show key input and generate key button
             self.key_label.show()
@@ -246,7 +293,13 @@ class EncryptionApp(QMainWindow):
                 self.key_input.setText(random_key)
             else:
                 QMessageBox.warning(self, "Error", f"API request failed with status code {response.status_code}.")
-            
+        elif algorithm == "One-Time Pad":
+            text = self.plaintext_input.toPlainText()
+            if not text:
+                QMessageBox.warning(self, "Error", "Please enter some text to generate a key!")
+                return
+            random_key = ''.join(chr(random.randint(0, 255)) for _ in range(len(text)))
+            self.key_input.setText(random_key)
         else:
             QMessageBox.warning(self, "Error", "Key generation is not supported for this algorithm.")
 
@@ -270,7 +323,18 @@ class EncryptionApp(QMainWindow):
             elif algorithm == "Playfair Cipher":
                 key = self.key_input.text()
                 result = self.play_fair_cipher(text, key, mode)
-                
+            elif algorithm == "Hill Cipher":
+                key = self.key_input.text()
+                result = self.hill_cipher(text, key, mode)
+            elif algorithm == "Vigenere Cipher":
+                key = self.key_input.text()
+                result = self.vigenere_cipher(text, key, mode)
+            elif algorithm == "Caesar Cipher":
+                shift = self.key_input.text()
+                result = self.caesar_cipher(text, shift, mode)
+            elif algorithm == "One-Time Pad":
+                key = self.key_input.text()
+                result = self.otp_cipher(text, key, mode)
             else:
                 result = "Unsupported algorithm."
 
@@ -521,6 +585,103 @@ class EncryptionApp(QMainWindow):
                     direction *= -1
             
             return ''.join(result)
+
+    def hill_cipher(self, text, key, mode):
+        """Hill Cipher"""
+        def create_matrix(key):
+            key = key.upper().replace(" ", "")
+            key_matrix = []
+            size = int(len(key) ** 0.5)
+            for i in range(size):
+                row = [ord(char) - ord('A') for char in key[i*size:(i+1)*size]]
+                key_matrix.append(row)
+            return np.array(key_matrix)
+
+        def mod_inverse(matrix, modulus):
+            det = int(np.round(np.linalg.det(matrix)))
+            det_inv = pow(det, -1, modulus)
+            matrix_mod_inv = det_inv * np.round(det * np.linalg.inv(matrix)).astype(int) % modulus
+            return matrix_mod_inv
+
+        key_matrix = create_matrix(key)
+        if mode == "Encrypt":
+            text = text.upper().replace(" ", "")
+            size = key_matrix.shape[0]
+            text_vector = [ord(char) - ord('A') for char in text]
+            while len(text_vector) % size != 0:
+                text_vector.append(ord('X') - ord('A'))
+            text_matrix = np.array(text_vector).reshape(-1, size)
+            encrypted_matrix = (text_matrix @ key_matrix) % 26
+            encrypted_text = ''.join(chr(num + ord('A')) for num in encrypted_matrix.flatten())
+            return encrypted_text
+        else:
+            inv_key_matrix = mod_inverse(key_matrix, 26)
+            text = text.upper().replace(" ", "")
+            size = key_matrix.shape[0]
+            text_vector = [ord(char) - ord('A') for char in text]
+            text_matrix = np.array(text_vector).reshape(-1, size)
+            decrypted_matrix = (text_matrix @ inv_key_matrix) % 26
+            decrypted_text = ''.join(chr(num + ord('A')) for num in decrypted_matrix.flatten())
+            return decrypted_text
+
+    def vigenere_cipher(self, text, key, mode):
+        """Vigenere Cipher"""
+        def extend_key(text, key):
+            key = key.upper().replace(" ", "")
+            key = list(key)
+            if len(text) == len(key):
+                return ''.join(key)
+            else:
+                for i in range(len(text) - len(key)):
+                    key.append(key[i % len(key)])
+            return ''.join(key)
+
+        key = extend_key(text, key)
+        text = text.upper().replace(" ", "")
+        if mode == "Encrypt":
+            encrypted_text = []
+            for i in range(len(text)):
+                x = (ord(text[i]) + ord(key[i])) % 26
+                x += ord('A')
+                encrypted_text.append(chr(x))
+            return ''.join(encrypted_text)
+        else:
+            decrypted_text = []
+            for i in range(len(text)):
+                x = (ord(text[i]) - ord(key[i]) + 26) % 26
+                x += ord('A')
+                decrypted_text.append(chr(x))
+            return ''.join(decrypted_text)
+
+    def caesar_cipher(self, text, shift, mode):
+        """Caesar Cipher"""
+        result = []
+        shift = int(shift)
+        if mode == "Decrypt":
+            shift = -shift
+
+        for char in text:
+            if char.isalpha():
+                shift_base = ord('A') if char.isupper() else ord('a')
+                result.append(chr((ord(char) - shift_base + shift) % 26 + shift_base))
+            else:
+                result.append(char)
+
+        return ''.join(result)
+
+    def otp_cipher(self, text, key, mode):
+        """One-Time Pad Cipher"""
+        if len(key) < len(text):
+            raise ValueError("Key must be at least as long as the text.")
+        
+        result = []
+        for i in range(len(text)):
+            if mode == "Encrypt":
+                result.append(chr((ord(text[i]) + ord(key[i])) % 256))
+            else:
+                result.append(chr((ord(text[i]) - ord(key[i])) % 256))
+        
+        return ''.join(result)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
