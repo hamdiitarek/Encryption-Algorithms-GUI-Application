@@ -1,8 +1,8 @@
 import sys
 import math
 import random
-import requests
 import numpy as np  
+import requests
 from collections import Counter
 from PySide6.QtGui import QIcon # type: ignore
 from PySide6.QtWidgets import ( # type: ignore
@@ -46,7 +46,8 @@ class EncryptionApp(QMainWindow):
             "Hill Cipher",
             "Vigenere Cipher",
             "Caesar Cipher",
-            "One-Time Pad"  
+            "One-Time Pad",
+            "Simplified DES"  
         ])
         self.algorithm_combo.currentTextChanged.connect(self.update_ui)
         self.layout.addWidget(self.algorithm_label)
@@ -269,6 +270,17 @@ class EncryptionApp(QMainWindow):
             self.key_label.setText("Enter Key:")
             self.key_label.show()
             self.key_input.show()
+        elif algorithm == "Simplified DES":
+            # Hide rails and columns input
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            # Show key input
+            self.generate_key_button.show()
+            self.key_label.setText("Enter 10-bit Key (binary):")
+            self.key_label.show()
+            self.key_input.show()
         else:
             # Show key input and generate key button
             self.key_label.show()
@@ -299,6 +311,10 @@ class EncryptionApp(QMainWindow):
                 QMessageBox.warning(self, "Error", "Please enter some text to generate a key!")
                 return
             random_key = ''.join(chr(random.randint(0, 255)) for _ in range(len(text)))
+            self.key_input.setText(random_key)
+        elif algorithm == "Simplified DES":
+            # Generate a random 10-bit key
+            random_key = ''.join(str(random.randint(0, 1)) for _ in range(10))
             self.key_input.setText(random_key)
         else:
             QMessageBox.warning(self, "Error", "Key generation is not supported for this algorithm.")
@@ -335,6 +351,9 @@ class EncryptionApp(QMainWindow):
             elif algorithm == "One-Time Pad":
                 key = self.key_input.text()
                 result = self.otp_cipher(text, key, mode)
+            elif algorithm == "Simplified DES":
+                key = self.key_input.text()
+                result = self.simplified_des(text, key, mode)
             else:
                 result = "Unsupported algorithm."
 
@@ -682,6 +701,140 @@ class EncryptionApp(QMainWindow):
                 result.append(chr((ord(text[i]) - ord(key[i])) % 256))
         
         return ''.join(result)
+    
+    def simplified_des(self, text, key, mode):
+        """Simplified DES (Data Encryption Standard)"""
+        # Check if key is valid (10 bits)
+        if not all(bit in '01' for bit in key) or len(key) != 10:
+            raise ValueError("Key must be a 10-bit binary string (only 0s and 1s)")
+        
+        # Initial Permutation (IP)
+        IP = [2, 6, 3, 1, 4, 8, 5, 7]
+        # Final Permutation (FP) - inverse of IP
+        FP = [4, 1, 3, 5, 7, 2, 8, 6]
+        # Expansion Permutation (EP)
+        EP = [4, 1, 2, 3, 2, 3, 4, 1]
+        # P4 Permutation
+        P4 = [2, 4, 3, 1]
+        # P10 Permutation
+        P10 = [3, 5, 2, 7, 4, 10, 1, 9, 8, 6]
+        # P8 Permutation
+        P8 = [6, 3, 7, 4, 8, 5, 10, 9]
+        
+        # S-boxes
+        S0 = [
+            [1, 0, 3, 2],
+            [3, 2, 1, 0],
+            [0, 2, 1, 3],
+            [3, 1, 3, 2]
+        ]
+        
+        S1 = [
+            [0, 1, 2, 3],
+            [2, 0, 1, 3],
+            [3, 0, 1, 0],
+            [2, 1, 0, 3]
+        ]
+        
+        def permute(bits, perm_table):
+            return ''.join(bits[i-1] for i in perm_table)
+        
+        def shift_left(bits, n):
+            return bits[n:] + bits[:n]
+        
+        def generate_subkeys(key):
+            # Apply P10 permutation to the key
+            key = permute(key, P10)
+            
+            # Split the key into two halves
+            left = key[:5]
+            right = key[5:]
+            
+            # Generate subkey K1 (shift both halves left by 1, then apply P8)
+            left = shift_left(left, 1)
+            right = shift_left(right, 1)
+            k1 = permute(left + right, P8)
+            
+            # Generate subkey K2 (shift both halves left by 2, then apply P8)
+            left = shift_left(left, 2)
+            right = shift_left(right, 2)
+            k2 = permute(left + right, P8)
+            
+            return k1, k2
+        
+        def f_function(right, subkey):
+            # Expand right half from 4 to 8 bits
+            expanded = permute(right, EP)
+            
+            # XOR with the subkey
+            xored = ''.join(str(int(a) ^ int(b)) for a, b in zip(expanded, subkey))
+            
+            # Split into two 4-bit parts
+            left = xored[:4]
+            right = xored[4:]
+            
+            # Apply S-boxes
+            row_l = int(left[0] + left[3], 2)
+            col_l = int(left[1] + left[2], 2)
+            s0_output = format(S0[row_l][col_l], '02b')
+            
+            row_r = int(right[0] + right[3], 2)
+            col_r = int(right[1] + right[2], 2)
+            s1_output = format(S1[row_r][col_r], '02b')
+            
+            # Combine and apply P4 permutation
+            return permute(s0_output + s1_output, P4)
+        
+        def encrypt_block(block, k1, k2):
+            # Initial permutation
+            block = permute(block, IP)
+            
+            # Split into two 4-bit halves
+            left = block[:4]
+            right = block[4:]
+            
+            # First round
+            new_right = ''.join(str(int(a) ^ int(b)) for a, b in zip(left, f_function(right, k1)))
+            new_left = right
+            
+            # Second round
+            left = new_left
+            right = new_right
+            new_right = ''.join(str(int(a) ^ int(b)) for a, b in zip(left, f_function(right, k2)))
+            new_left = right
+            
+            # Combine and apply final permutation
+            return permute(new_right + new_left, FP)
+        
+        def decrypt_block(block, k1, k2):
+            # For decryption, use the subkeys in reverse order
+            return encrypt_block(block, k2, k1)
+        
+        # Convert text to binary
+        binary_text = ''.join(format(ord(char), '08b') for char in text)
+        
+        # Pad if necessary to make length a multiple of 8
+        if len(binary_text) % 8 != 0:
+            binary_text += '0' * (8 - (len(binary_text) % 8))
+        
+        # Generate subkeys
+        k1, k2 = generate_subkeys(key)
+        
+        # Process each 8-bit block
+        result = ""
+        for i in range(0, len(binary_text), 8):
+            block = binary_text[i:i+8]
+            if mode == "Encrypt":
+                processed_block = encrypt_block(block, k1, k2)
+            else:
+                processed_block = decrypt_block(block, k1, k2)
+            
+            # Convert binary back to character
+            result += chr(int(processed_block, 2))
+        
+        return result
+        
+        
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
