@@ -717,7 +717,7 @@ class EncryptionApp(QMainWindow):
         # P4 Permutation
         P4 = [2, 4, 3, 1]
         # P10 Permutation
-        P10 = [3, 5, 2, 7, 4, 10, 1, 9, 8, 6]
+        P10 = [3,5,2,7,4,10,1,9,8,6]
         # P8 Permutation
         P8 = [6, 3, 7, 4, 8, 5, 10, 9]
         
