@@ -47,7 +47,9 @@ class EncryptionApp(QMainWindow):
             "Vigenere Cipher",
             "Caesar Cipher",
             "One-Time Pad",
-            "Simplified DES"  
+            "Simplified DES",
+            "Euclidean Algorithm",
+            "Extended Euclidean Algorithm"
         ])
         self.algorithm_combo.currentTextChanged.connect(self.update_ui)
         self.layout.addWidget(self.algorithm_label)
@@ -208,6 +210,8 @@ class EncryptionApp(QMainWindow):
             # Show rails input
             self.rails_label.show()
             self.rails_input.show()
+            self.mode_label.show()
+            self.mode_combo.show()
         elif algorithm == "Route Cipher":
             # Hide key input and generate key button
             self.key_label.hide()
@@ -218,6 +222,8 @@ class EncryptionApp(QMainWindow):
             # Show columns input
             self.columns_label.show()
             self.columns_input.show()
+            self.mode_label.show()
+            self.mode_combo.show()
         elif algorithm == "Playfair Cipher":
             # Hide key input and generate key button
             self.rails_label.hide()
@@ -228,6 +234,8 @@ class EncryptionApp(QMainWindow):
             self.generate_key_button.show()
             self.key_label.show()
             self.key_input.show()
+            self.mode_label.show()
+            self.mode_combo.show()
         elif algorithm == "Hill Cipher":
             # Hide rails and columns input
             self.rails_label.hide()
@@ -238,6 +246,8 @@ class EncryptionApp(QMainWindow):
             self.generate_key_button.hide()
             self.key_label.show()
             self.key_input.show()
+            self.mode_label.show()
+            self.mode_combo.show()
         elif algorithm == "Vigenere Cipher":
             # Hide rails and columns input
             self.rails_label.hide()
@@ -248,6 +258,8 @@ class EncryptionApp(QMainWindow):
             self.generate_key_button.hide()
             self.key_label.show()
             self.key_input.show()
+            self.mode_label.show()
+            self.mode_combo.show()
         elif algorithm == "Caesar Cipher":
             # Hide rails and columns input
             self.rails_label.hide()
@@ -259,6 +271,8 @@ class EncryptionApp(QMainWindow):
             self.key_label.setText("Enter Shift:")
             self.key_label.show()
             self.key_input.show()
+            self.mode_label.show()
+            self.mode_combo.show()
         elif algorithm == "One-Time Pad":
             # Hide rails and columns input
             self.rails_label.hide()
@@ -270,6 +284,8 @@ class EncryptionApp(QMainWindow):
             self.key_label.setText("Enter Key:")
             self.key_label.show()
             self.key_input.show()
+            self.mode_label.show()
+            self.mode_combo.show()
         elif algorithm == "Simplified DES":
             # Hide rails and columns input
             self.rails_label.hide()
@@ -281,6 +297,42 @@ class EncryptionApp(QMainWindow):
             self.key_label.setText("Enter 10-bit Key (binary):")
             self.key_label.show()
             self.key_input.show()
+            self.mode_label.show()
+            self.mode_combo.show()
+        elif algorithm == "Euclidean Algorithm":
+            # Hide rails, columns, and generate key
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            self.generate_key_button.hide()
+            self.mode_label.hide()
+            self.mode_combo.hide()
+            # Repurpose the key input for the first number
+            self.key_label.setText("Enter first number (a):")
+            self.key_label.show()
+            self.key_input.show()
+            # Repurpose plaintext label for the second number
+            self.plaintext_label.setText("Enter second number (b):")
+            # Change the process button text
+            self.process_button.setText("Calculate GCD")
+        elif algorithm == "Extended Euclidean Algorithm":
+            # Hide rails, columns, and generate key
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            self.generate_key_button.hide()
+            self.mode_label.hide()
+            self.mode_combo.hide()
+             # Repurpose the key input for the first number
+            self.key_label.setText("Enter first number (a):")
+            self.key_label.show()
+            self.key_input.show()
+            # Repurpose plaintext label for the second number
+            self.plaintext_label.setText("Enter second number (b):")
+            # Change the process button text
+            self.process_button.setText("Calculate")
         else:
             # Show key input and generate key button
             self.key_label.show()
@@ -291,6 +343,9 @@ class EncryptionApp(QMainWindow):
             self.rails_input.hide()
             self.columns_label.hide()
             self.columns_input.hide()
+            # Reset labels to default
+            self.plaintext_label.setText("Plaintext:")
+            self.process_button.setText("Process")
 
     def generate_key(self):
         """Generate a key for algorithms that require one."""
@@ -354,6 +409,14 @@ class EncryptionApp(QMainWindow):
             elif algorithm == "Simplified DES":
                 key = self.key_input.text()
                 result = self.simplified_des(text, key, mode)
+            elif algorithm == "Euclidean Algorithm":
+                a = int(text)
+                b = int(self.key_input.text())
+                result = self.euclidean_algorithm(a, b)
+            elif algorithm == "Extended Euclidean Algorithm":
+                a = int(text)
+                b = int(self.key_input.text())
+                result = self.extended_euclidean_algorithm(a, b)
             else:
                 result = "Unsupported algorithm."
 
@@ -834,7 +897,72 @@ class EncryptionApp(QMainWindow):
         
         return result
         
+    def euclidean_algorithm(self, a, b):
+        """Implementation of the Euclidean Algorithm to find the greatest common divisor (GCD)."""
+        # Ensure a >= b
+        if a < b:
+            a, b = b, a
+            
+        # Keep track of the steps for display purposes
+        steps = []
         
+        while b != 0:
+            steps.append(f"{a} = {b} × {a // b} + {a % b}")
+            a, b = b, a % b
+            
+        # Format the output with steps and result
+        result = "\n".join(steps)
+        result += f"\n\nGCD = {a}"
+        
+        return result
+        
+    def extended_euclidean_algorithm(self, a, b):
+        """Implementation of the Extended Euclidean Algorithm to find GCD and Bézout coefficients."""
+        # Ensure a >= b
+        swap = False
+        if a < b:
+            a, b = b, a
+            swap = True
+            
+        # Initialize variables
+        s0, s1 = 1, 0
+        t0, t1 = 0, 1
+        r0, r1 = a, b
+        
+        # Keep track of the steps for display purposes
+        steps = []
+        steps.append(f"Step 0: r0 = {r0}, s0 = {s0}, t0 = {t0}")
+        steps.append(f"Step 1: r1 = {r1}, s1 = {s1}, t1 = {t1}")
+        
+        # Extended Euclidean Algorithm
+        i = 1
+        while r1 != 0:
+            q = r0 // r1
+            r0, r1 = r1, r0 - q * r1
+            s0, s1 = s1, s0 - q * s1
+            t0, t1 = t1, t0 - q * t1
+            i += 1
+            steps.append(f"Step {i}: q = {q}, r{i} = {r0}, s{i} = {s0}, t{i} = {t0}")
+        
+        # Format the output with steps and result
+        result = "\n".join(steps)
+        
+        # Adjusting coefficients if we swapped a and b initially
+        if swap:
+            s0, t0 = t0, s0
+            
+        result += f"\n\nGCD({a}, {b}) = {r0}"
+        result += f"\n{r0} = {s0}({a}) + {t0}({b})"
+        
+        # Addition for modular inverse
+        if r0 == 1:  # If gcd is 1, modular inverse exists
+            result += f"\n\nModular Inverse:"
+            if swap:
+                result += f"\n{a}⁻¹ mod {b} = {t0 % b}"
+            else:
+                result += f"\n{b}⁻¹ mod {a} = {s0 % a}"
+        
+        return result
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
