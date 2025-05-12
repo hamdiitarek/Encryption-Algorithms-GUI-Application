@@ -1177,7 +1177,6 @@ class EncryptionApp(QMainWindow):
             left = block[:32]
             right = block[32:]
             
-            blocks = ''
             for x in range(16):
                 new_right = ''.join(str(int(a) ^ int(b)) for a, b in zip(left, f_function(right, keys[x])))
                 left = right
