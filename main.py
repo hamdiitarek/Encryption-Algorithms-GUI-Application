@@ -11,6 +11,8 @@ from PySide6.QtWidgets import ( # type: ignore
 )
 
 import matplotlib.pyplot as plt
+import base64
+import binascii
 
 
 class EncryptionApp(QMainWindow):
@@ -49,6 +51,7 @@ class EncryptionApp(QMainWindow):
             "One-Time Pad",
             "Simplified DES",
             "DES",
+            "AES",
             "Euclidean Algorithm",
             "Extended Euclidean Algorithm"
         ])
@@ -313,6 +316,19 @@ class EncryptionApp(QMainWindow):
             self.key_input.show()
             self.mode_label.show()
             self.mode_combo.show()
+        elif algorithm == "AES":
+            # Hide rails and columns input
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            # Show key input
+            self.generate_key_button.show()
+            self.key_label.setText("Enter 128-bit Key:")
+            self.key_label.show()
+            self.key_input.show()
+            self.mode_label.show()
+            self.mode_combo.show()
         elif algorithm == "Euclidean Algorithm":
             # Hide rails, columns, and generate key
             self.rails_label.hide()
@@ -389,6 +405,10 @@ class EncryptionApp(QMainWindow):
             # Generate a random 64-bit key
             random_key = ''.join(str(random.randint(0, 1)) for _ in range(64))
             self.key_input.setText(random_key)
+        elif algorithm == "AES":
+            # Generate a random 128-bit key
+            random_key = ''.join(str(random.randint(0, 1)) for _ in range(128))
+            self.key_input.setText(random_key)
         else:
             QMessageBox.warning(self, "Error", "Key generation is not supported for this algorithm.")
 
@@ -439,6 +459,18 @@ class EncryptionApp(QMainWindow):
                     key = key[:64]
                 
                 result = self.des(text, key, mode)
+            elif algorithm == "AES":
+                key = self.key_input.text()
+
+                if not all(bit in '01' for bit in key):
+                    key = ''.join(format(ord(char), '08b') for char in key)
+
+                if len(key) < 128:
+                    key = key.ljust(128, '0')
+                elif len(key) > 128:
+                    key = key[:128]
+                
+                result = self.aes(text, key, mode)
             elif algorithm == "Euclidean Algorithm":
                 a = int(text)
                 b = int(self.key_input.text())
@@ -927,7 +959,6 @@ class EncryptionApp(QMainWindow):
             result += chr(int(processed_block, 2))
         
         return result
-        
     def euclidean_algorithm(self, a, b):
         """Implementation of the Euclidean Algorithm to find the greatest common divisor (GCD)."""
         # Ensure a >= b
@@ -993,8 +1024,7 @@ class EncryptionApp(QMainWindow):
             else:
                 result += f"\n{b}⁻¹ mod {a} = {s0 % a}"
         
-        return result
-
+        return result    
     def des(self, text, key, mode):
 
         ##596F7572206C6970732061726520736D6F6F74686572207468616E20766173656C696E650D0A0000
@@ -1215,6 +1245,311 @@ class EncryptionApp(QMainWindow):
                     result += chr(int(processed_block[j:j+8], 2))
                     
         return result
+    
+    def aes(self, text, key, mode):
+        """Advanced Encryption Standard (AES) implementation from scratch"""
+        # AES S-box for SubBytes operation
+        s_box = [
+            0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
+            0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
+            0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
+            0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x80, 0xe2, 0xeb, 0x27, 0xb2, 0x75,
+            0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0, 0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84,
+            0x53, 0xd1, 0x00, 0xed, 0x20, 0xfc, 0xb1, 0x5b, 0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf,
+            0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c, 0x9f, 0xa8,
+            0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5, 0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2,
+            0xcd, 0x0c, 0x13, 0xec, 0x5f, 0x97, 0x44, 0x17, 0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73,
+            0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88, 0x46, 0xee, 0xb8, 0x14, 0xde, 0x5e, 0x0b, 0xdb,
+            0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c, 0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79,
+            0xe7, 0xc8, 0x37, 0x6d, 0x8d, 0xd5, 0x4e, 0xa9, 0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08,
+            0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6, 0xe8, 0xdd, 0x74, 0x1f, 0x4b, 0xbd, 0x8b, 0x8a,
+            0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
+            0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
+            0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
+        ]
+        
+        # Inverse S-box for InvSubBytes operation
+        inv_s_box = [
+            0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
+            0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
+            0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e,
+            0x08, 0x2e, 0xa1, 0x66, 0x28, 0xd9, 0x24, 0xb2, 0x76, 0x5b, 0xa2, 0x49, 0x6d, 0x8b, 0xd1, 0x25,
+            0x72, 0xf8, 0xf6, 0x64, 0x86, 0x68, 0x98, 0x16, 0xd4, 0xa4, 0x5c, 0xcc, 0x5d, 0x65, 0xb6, 0x92,
+            0x6c, 0x70, 0x48, 0x50, 0xfd, 0xed, 0xb9, 0xda, 0x5e, 0x15, 0x46, 0x57, 0xa7, 0x8d, 0x9d, 0x84,
+            0x90, 0xd8, 0xab, 0x00, 0x8c, 0xbc, 0xd3, 0x0a, 0xf7, 0xe4, 0x58, 0x05, 0xb8, 0xb3, 0x45, 0x06,
+            0xd0, 0x2c, 0x1e, 0x8f, 0xca, 0x3f, 0x0f, 0x02, 0xc1, 0xaf, 0xbd, 0x03, 0x01, 0x13, 0x8a, 0x6b,
+            0x3a, 0x91, 0x11, 0x41, 0x4f, 0x67, 0xdc, 0xea, 0x97, 0xf2, 0xcf, 0xce, 0xf0, 0xb4, 0xe6, 0x73,
+            0x96, 0xac, 0x74, 0x22, 0xe7, 0xad, 0x35, 0x85, 0xe2, 0xf9, 0x37, 0xe8, 0x1c, 0x75, 0xdf, 0x6e,
+            0x47, 0xf1, 0x1a, 0x71, 0x1d, 0x29, 0xc5, 0x89, 0x6f, 0xb7, 0x62, 0x0e, 0xaa, 0x18, 0xbe, 0x1b,
+            0xfc, 0x56, 0x3e, 0x4b, 0xc6, 0xd2, 0x79, 0x20, 0x9a, 0xdb, 0xc0, 0xfe, 0x78, 0xcd, 0x5a, 0xf4,
+            0x1f, 0xdd, 0xa8, 0x33, 0x88, 0x07, 0xc7, 0x31, 0xb1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xec, 0x5f,
+            0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef,
+            0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
+            0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d
+        ]
+        
+        # Rcon values for key expansion
+        rcon = [
+            0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36
+        ]
+        
+        # Convert text to a padded array of bytes
+        def text_to_blocks(text):
+            # Convert text to bytes
+            blocks = []
+            text_bytes = text.encode('utf-8')
+            
+            # Add padding: PKCS#7
+            padding_len = 16 - (len(text_bytes) % 16)
+            padded_text = text_bytes + bytes([padding_len] * padding_len)
+            
+            # Create blocks of 16 bytes (128 bits)
+            for i in range(0, len(padded_text), 16):
+                block = padded_text[i:i+16]
+                blocks.append(block)
+            
+            return blocks
+        
+        # Convert blocks back to text and remove padding
+        def blocks_to_text(blocks):
+            result = b''
+            for block in blocks:
+                result += bytes(block)
+            
+            # Remove PKCS#7 padding
+            padding_len = result[-1]
+            if padding_len < 16:
+                return result[:-padding_len].decode('utf-8', errors='replace')
+            else:
+                return result.decode('utf-8', errors='replace')
+        
+        # Convert binary key to bytes
+        def binary_to_key(binary_key):
+            key_bytes = bytearray(16)  # 16 bytes = 128 bits
+            for i in range(16):
+                byte_val = 0
+                for j in range(8):
+                    bit_index = i * 8 + j
+                    if bit_index < len(binary_key) and binary_key[bit_index] == '1':
+                        byte_val |= (1 << (7 - j))
+                key_bytes[i] = byte_val
+            return key_bytes
+        
+        # Key expansion to generate round keys
+        def key_expansion(key):
+            # Convert binary key string to actual key bytes
+            if all(bit in '01' for bit in key):
+                key = binary_to_key(key)
+            else:
+                # If key is not binary, treat as ASCII and pad/truncate to 16 bytes
+                key = key.encode('utf-8')
+                if len(key) < 16:
+                    key = key.ljust(16, b'\x00')
+                else:
+                    key = key[:16]
+            
+            # Key expansion: 10 rounds for AES-128 -> 11 round keys (including initial)
+            round_keys = [bytearray(16) for _ in range(11)]
+            round_keys[0] = bytearray(key)
+            
+            for i in range(1, 11):
+                # Take last 4 bytes of previous round key
+                temp = bytearray(round_keys[i-1][-4:])
+                
+                # Rotate word
+                temp = temp[1:] + temp[:1]
+                
+                # Apply S-box
+                for j in range(4):
+                    temp[j] = s_box[temp[j]]
+                
+                # XOR with round constant (only first byte)
+                temp[0] ^= rcon[i-1]
+                
+                # Generate new round key
+                for j in range(4):
+                    for k in range(4):
+                        idx = j * 4 + k
+                        prev_idx = idx - 16 if idx >= 16 else idx
+                        round_keys[i][idx] = round_keys[i-1][idx] ^ (temp[k] if j == 0 else round_keys[i][prev_idx])
+            
+            return round_keys
+        
+        # SubBytes transformation
+        def sub_bytes(state):
+            for i in range(16):
+                state[i] = s_box[state[i]]
+            return state
+        
+        # InvSubBytes transformation
+        def inv_sub_bytes(state):
+            for i in range(16):
+                state[i] = inv_s_box[state[i]]
+            return state
+        
+        # ShiftRows transformation
+        def shift_rows(state):
+            # Convert to 4x4 matrix form for easier shifting
+            matrix = [state[i:i+4] for i in range(0, 16, 4)]
+            
+            # Shift rows (1st row not shifted)
+            matrix[1] = matrix[1][1:] + matrix[1][:1]  # Shift 1 to left
+            matrix[2] = matrix[2][2:] + matrix[2][:2]  # Shift 2 to left
+            matrix[3] = matrix[3][3:] + matrix[3][:3]  # Shift 3 to left
+            
+            # Convert back to flat array
+            return bytearray([matrix[i//4][i%4] for i in range(16)])
+        
+        # InvShiftRows transformation
+        def inv_shift_rows(state):
+            # Convert to 4x4 matrix form
+            matrix = [state[i:i+4] for i in range(0, 16, 4)]
+            
+            # Inverse shift rows (1st row not shifted)
+            matrix[1] = matrix[1][3:] + matrix[1][:3]  # Shift 1 to right
+            matrix[2] = matrix[2][2:] + matrix[2][:2]  # Shift 2 to right
+            matrix[3] = matrix[3][1:] + matrix[3][:1]  # Shift 3 to right
+            
+            # Convert back to flat array
+            return bytearray([matrix[i//4][i%4] for i in range(16)])
+        
+        # Helper function for MixColumns
+        def galois_multiply(a, b):
+            p = 0
+            for i in range(8):
+                if b & 1:
+                    p ^= a
+                high_bit_set = a & 0x80
+                a <<= 1
+                if high_bit_set:
+                    a ^= 0x1B  # XOR with irreducible polynomial x^8 + x^4 + x^3 + x + 1
+                b >>= 1
+            return p & 0xFF
+        
+        # MixColumns transformation
+        def mix_columns(state):
+            result = bytearray(16)
+            
+            for i in range(0, 16, 4):
+                result[i] = galois_multiply(state[i], 2) ^ galois_multiply(state[i+1], 3) ^ state[i+2] ^ state[i+3]
+                result[i+1] = state[i] ^ galois_multiply(state[i+1], 2) ^ galois_multiply(state[i+2], 3) ^ state[i+3]
+                result[i+2] = state[i] ^ state[i+1] ^ galois_multiply(state[i+2], 2) ^ galois_multiply(state[i+3], 3)
+                result[i+3] = galois_multiply(state[i], 3) ^ state[i+1] ^ state[i+2] ^ galois_multiply(state[i+3], 2)
+            
+            return result
+        
+        # InvMixColumns transformation
+        def inv_mix_columns(state):
+            result = bytearray(16)
+            
+            for i in range(0, 16, 4):
+                result[i] = galois_multiply(state[i], 0x0E) ^ galois_multiply(state[i+1], 0x0B) ^ galois_multiply(state[i+2], 0x0D) ^ galois_multiply(state[i+3], 0x09)
+                result[i+1] = galois_multiply(state[i], 0x09) ^ galois_multiply(state[i+1], 0x0E) ^ galois_multiply(state[i+2], 0x0B) ^ galois_multiply(state[i+3], 0x0D)
+                result[i+2] = galois_multiply(state[i], 0x0D) ^ galois_multiply(state[i+1], 0x09) ^ galois_multiply(state[i+2], 0x0E) ^ galois_multiply(state[i+3], 0x0B)
+                result[i+3] = galois_multiply(state[i], 0x0B) ^ galois_multiply(state[i+1], 0x0D) ^ galois_multiply(state[i+2], 0x09) ^ galois_multiply(state[i+3], 0x0E)
+            
+            return result
+        
+        # AddRoundKey transformation
+        def add_round_key(state, round_key):
+            for i in range(16):
+                state[i] ^= round_key[i]
+            return state
+        
+        # AES encryption of a single block
+        def encrypt_block(block, round_keys):
+            state = bytearray(block)
+            
+            # Initial round
+            state = add_round_key(state, round_keys[0])
+            
+            # Main rounds
+            for i in range(1, 10):
+                state = sub_bytes(state)
+                state = shift_rows(state)
+                state = mix_columns(state)
+                state = add_round_key(state, round_keys[i])
+            
+            # Final round (no MixColumns)
+            state = sub_bytes(state)
+            state = shift_rows(state)
+            state = add_round_key(state, round_keys[10])
+            
+            return state
+        
+        # AES decryption of a single block
+        def decrypt_block(block, round_keys):
+            state = bytearray(block)
+            
+            # Initial round
+            state = add_round_key(state, round_keys[10])
+            state = inv_shift_rows(state)
+            state = inv_sub_bytes(state)
+            
+            # Main rounds
+            for i in range(9, 0, -1):
+                state = add_round_key(state, round_keys[i])
+                state = inv_mix_columns(state)
+                state = inv_shift_rows(state)
+                state = inv_sub_bytes(state)
+            
+            # Final round
+            state = add_round_key(state, round_keys[0])
+            
+            return state
+        
+        # Main AES function
+        try:
+            # Generate round keys
+            round_keys = key_expansion(key)
+            
+            if mode == "Encrypt":
+                # Convert text to blocks
+                blocks = text_to_blocks(text)
+                
+                # Encrypt each block
+                encrypted_blocks = [encrypt_block(block, round_keys) for block in blocks]
+                
+                # Convert to base64 for display
+                encrypted_bytes = b''.join(bytes(block) for block in encrypted_blocks)
+                return base64.b64encode(encrypted_bytes).decode('utf-8')
+            else:
+                # Decode base64 input
+                try:
+                    encrypted_bytes = base64.b64decode(text)
+                except:
+                    # If not base64, treat as raw encrypted bytes
+                    encrypted_bytes = text.encode('utf-8')
+                
+                # Split into blocks
+                blocks = [encrypted_bytes[i:i+16] for i in range(0, len(encrypted_bytes), 16)]
+                
+                # Decrypt each block
+                decrypted_blocks = [decrypt_block(block, round_keys) for block in blocks]
+                
+                # Convert blocks back to text
+                return blocks_to_text(decrypted_blocks)
+        except Exception as e:
+            return f"AES Error: {str(e)}"
+        
+
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = EncryptionApp()
+    app.setWindowIcon(QIcon("encryptiontoolLogo.icns"))
+    app.setApplicationName("Encryption Tool")
+    window.setWindowIcon(QIcon("encryptiontoolLogo.icns"))    
+    window.setWindowTitle("Encryption Tool")
+    window.show()
+    sys.exit(app.exec())
+
             
 
             
