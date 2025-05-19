@@ -3,6 +3,7 @@ import math
 import random
 import numpy as np  
 import requests
+import hashlib
 from collections import Counter
 from PySide6.QtGui import QIcon # type: ignore
 from PySide6.QtWidgets import ( # type: ignore
@@ -53,7 +54,11 @@ class EncryptionApp(QMainWindow):
             "DES",
             "AES",
             "Euclidean Algorithm",
-            "Extended Euclidean Algorithm"
+            "Extended Euclidean Algorithm",
+            "MD5 Hash",
+            "SHA-1 Hash",
+            "SHA-256 Hash",
+            "SHA-512 Hash"
         ])
         self.algorithm_combo.currentTextChanged.connect(self.update_ui)
         self.layout.addWidget(self.algorithm_label)
@@ -204,7 +209,21 @@ class EncryptionApp(QMainWindow):
         """Update the UI based on the selected algorithm."""
         algorithm = self.algorithm_combo.currentText()
 
-        if algorithm == "Rail Fence Cipher":
+        if algorithm in ["MD5 Hash", "SHA-1 Hash", "SHA-256 Hash", "SHA-512 Hash"]:
+            # Hide unnecessary inputs for hashing
+            self.key_label.hide()
+            self.key_input.hide()
+            self.generate_key_button.hide()
+            self.rails_label.hide()
+            self.rails_input.hide()
+            self.columns_label.hide()
+            self.columns_input.hide()
+            self.mode_label.hide()
+            self.mode_combo.hide()
+            # Reset labels to default
+            self.plaintext_label.setText("Enter text to hash:")
+            self.process_button.setText("Generate Hash")
+        elif algorithm == "Rail Fence Cipher":
             # Hide key input and generate key button
             self.key_label.hide()
             self.key_input.hide()
@@ -423,7 +442,15 @@ class EncryptionApp(QMainWindow):
             return
 
         try:
-            if algorithm == "Rail Fence Cipher":
+            if algorithm == "MD5 Hash":
+                result = self.hash_text(text, "md5")
+            elif algorithm == "SHA-1 Hash":
+                result = self.hash_text(text, "sha1")
+            elif algorithm == "SHA-256 Hash":
+                result = self.hash_text(text, "sha256")
+            elif algorithm == "SHA-512 Hash":
+                result = self.hash_text(text, "sha512")
+            elif algorithm == "Rail Fence Cipher":
                 rails = int(self.rails_input.text())
                 result = self.rail_fence_cipher(text, rails, mode)
             elif algorithm == "Route Cipher":
@@ -1532,39 +1559,28 @@ class EncryptionApp(QMainWindow):
         except Exception as e:
             return f"AES Error: {str(e)}"
         
+    def hash_text(self, text, algorithm):
+        """Generate hash of the input text using the specified algorithm."""
+        try:
+            # Create hash object based on algorithm
+            if algorithm == "md5":
+                hash_obj = hashlib.md5()
+            elif algorithm == "sha1":
+                hash_obj = hashlib.sha1()
+            elif algorithm == "sha256":
+                hash_obj = hashlib.sha256()
+            elif algorithm == "sha512":
+                hash_obj = hashlib.sha512()
+            else:
+                raise ValueError(f"Unsupported hashing algorithm: {algorithm}")
 
-
-
-
-
-
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = EncryptionApp()
-    app.setWindowIcon(QIcon("encryptiontoolLogo.icns"))
-    app.setApplicationName("Encryption Tool")
-    window.setWindowIcon(QIcon("encryptiontoolLogo.icns"))    
-    window.setWindowTitle("Encryption Tool")
-    window.show()
-    sys.exit(app.exec())
-
+            # Update hash object with text
+            hash_obj.update(text.encode('utf-8'))
             
-
-            
-
-
-
-
-
-        
-
-
-
-
-
-
+            # Get hexadecimal digest
+            return hash_obj.hexdigest()
+        except Exception as e:
+            raise Exception(f"Error generating hash: {str(e)}")
 
 
 if __name__ == "__main__":
