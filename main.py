@@ -1583,7 +1583,8 @@ class EncryptionApp(QMainWindow):
             raise Exception(f"Error generating hash: {str(e)}")
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the application."""
     app = QApplication(sys.argv)
     window = EncryptionApp()
     app.setWindowIcon(QIcon("encryptiontoolLogo.icns"))
@@ -1591,4 +1592,8 @@ if __name__ == "__main__":
     window.setWindowIcon(QIcon("encryptiontoolLogo.icns"))    
     window.setWindowTitle("Encryption Tool")
     window.show()
-    sys.exit(app.exec())
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

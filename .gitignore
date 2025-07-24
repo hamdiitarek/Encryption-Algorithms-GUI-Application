@@ -1,5 +1,35 @@
-/.DS_Store
-/build/
-/dist/
-Encryption Tool.spec
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.lnk
+
+# Project specific
 temp.py
+*.dmg
+*.log
