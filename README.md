@@ -2,10 +2,6 @@
 
 A comprehensive desktop application built with Python and PySide6 that provides implementations of various classic and modern encryption algorithms for educational purposes.
 
-<div align="center">
-  <img src="encryptiontoolLogo.icns" alt="Encryption Tool Logo" width="128" height="128">
-</div>
-
 ## Features
 
 ### � **16 Cryptographic Algorithms**
